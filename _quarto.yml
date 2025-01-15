@@ -1,5 +1,6 @@
 project:
   title: "Etudes"
   execute-dir: project
+  type: website
 
 
