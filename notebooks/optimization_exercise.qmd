@@ -2,40 +2,6 @@
 title: Math before you code
 ---
 
-```{r lockfile, include=FALSE}
-renv::use(
-  base64enc   = "base64enc@0.1-3",
-  bslib       = "bslib@0.8.0",
-  cachem      = "cachem@1.1.0",
-  cli         = "cli@3.6.3",
-  digest      = "digest@0.6.37",
-  evaluate    = "evaluate@1.0.1",
-  fastmap     = "fastmap@1.2.0",
-  fontawesome = "fontawesome@0.5.3",
-  fs          = "fs@1.6.5",
-  glue        = "glue@1.8.0",
-  highr       = "highr@0.11",
-  htmltools   = "htmltools@0.5.8.1",
-  jquerylib   = "jquerylib@0.1.4",
-  jsonlite    = "jsonlite@1.8.9",
-  knitr       = "knitr@1.49",
-  lifecycle   = "lifecycle@1.0.4",
-  memoise     = "memoise@2.0.1",
-  mime        = "mime@0.12",
-  R6          = "R6@2.5.1",
-  rappdirs    = "rappdirs@0.3.3",
-  renv        = "renv@1.0.11",
-  rlang       = "rlang@1.1.4",
-  rmarkdown   = "rmarkdown@2.29",
-  sass        = "sass@0.4.9",
-  tinytest    = "tinytest@1.4.1",
-  tinytex     = "tinytex@0.54",
-  xfun        = "xfun@0.50",
-  yaml        = "yaml@2.3.10"
-)
-```
-
-
 *Problem*: calculate the sum of all integers smaller or equal to N which are divisible by 3 or 5.
 
 *Example*: if N = 20, then the answer is 3+5+6+9+10+12+15+18+20 = 98
@@ -44,25 +10,28 @@ I'm exploring this problem as a potential exercise for students in my Scientific
 ```{r}
 #| include: false
 test_cases <- list(
-  list(N=3, res=3),
-  list(N=-1, res=0),
-  list(N=20, res=3+5+6+9+10+12+15+18+20),
-  list(N=6, res=3+5+6),
-  list(N=4, res=1234512)
+  list(N = 3, res = 3),
+  list(N = -100, res = 0),
+  list(N = 20, res = 3 + 5 + 6 + 9 + 10 + 12 + 15 + 18 + 20),
+  list(N = 6, res = 3 + 5 + 6),
+  list(N = 0, res = 0)
 )
 
 test <- function(.f, test_cases) {
-  lapply(test_cases, \(case) {
-     tinytest::expect_equal(.f(case$N), case$res)
+  out <- lapply(test_cases, \(case) {
+    tinytest::expect_equal(.f(case$N), case$res)
   })
+  class(out) <- "tinytests"
+  out
 }
+
 ```
 
 Here is a horrible way to implement this in R:
 
 
 ```{r}
-sum_multiples <- function(N) {
+sum_multiples_loop <- function(N) {
   out <- 0
   for (i in 1:N) {
     if (i %% 3 == 0 || i %% 5 == 0) {
@@ -72,6 +41,117 @@ sum_multiples <- function(N) {
   return(out)
 }
 
-sum_multiples(20)
-test(sum_multiples, test_cases)
+sum_multiples_loop(20)
+test(sum_multiples_loop, test_cases)
 ```
+
+There are a ton of problems. And we get a failed test case when N < 0.
+
+We can of course vectorize a lot and simplify the whole thing dramatically:
+
+```{r}
+sum_multiples_vectorized <- function(N) {
+  x <- 1:N
+  sum(x[x %% 3 == 0 | x %% 5 == 0])
+}
+
+sum_multiples_vectorized(20)
+test(sum_multiples_vectorized, test_cases)
+```
+
+though we still get an error for N < 0. We can fix it by 
+
+```{r}
+sum_multiples_vectorized <- function(N) {
+  if (N <= 0) {
+    return(0)
+  }
+  x <- seq_len(N)
+  sum(x[x %% 3 == 0 | x %% 5 == 0])
+}
+
+sum_multiples_vectorized(20)
+test(sum_multiples_vectorized, test_cases)
+```
+
+we can of course compare the speeds and marvel:
+
+```{r}
+bench::mark(
+  sum_multiples_loop(1e6),
+  sum_multiples_vectorized(1e6),
+  relative = TRUE
+)
+```
+
+but we can do the math and get much better results:
+
+
+```{r}
+sum_multiples_math <- function(N) {
+  if (N <= 0) {
+    return(0)
+  }
+  triangular_number <- function(n) {
+    n * (n + 1) / 2
+  }
+
+  a <- 3
+  b <- 5
+  c <- 15
+
+  a * triangular_number(floor(N / a)) +
+    b * triangular_number(floor(N / b)) -
+    c * triangular_number(floor(N / c))
+}
+
+test(sum_multiples_math, test_cases)
+```
+
+compare to the other two functions:
+
+
+```{r}
+bench::mark(
+  sum_multiples_loop(1e6),
+  sum_multiples_vectorized(1e6),
+  sum_multiples_math(1e6),
+  relative = TRUE
+)
+```
+
+of course, in all cases we can parametrize the function rather than hard-coding it. The challenge would be to find the least common multiple. You could use the function `pracma::Lcm`
+
+
+
+```{r}
+sum_series_divisors <- function(N, a, b) {
+  if (N <= 0) {
+    return(0)
+  }
+  triangular_number <- function(n) {
+    n * (n + 1) / 2
+  }
+
+  lcm <- pracma::Lcm(a, b)
+
+  a * triangular_number(floor(N / a)) +
+    b * triangular_number(floor(N / b)) -
+    lcm * triangular_number(floor(N / lcm))
+}
+
+test(\(x) sum_series_divisors(x, a = 3, b = 5), test_cases)
+```
+
+which incurs a cost of course, but that cost is miniscule relative to the other approaches above:
+
+```{r}
+sum_series_divisors_3_5 <- \(x) sum_series_divisors(x, a = 3, b = 5)
+bench::mark(
+  sum_multiples_math(1e6),
+  sum_series_divisors_3_5(1e6),
+  relative = TRUE
+)
+```
+
+but let's not use any libraries and write our own lcm function
