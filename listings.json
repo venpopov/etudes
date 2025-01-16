@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/notebooks/test.html",
       "/notebooks/optimization_exercise.html"
     ]
   }

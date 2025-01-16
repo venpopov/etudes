@@ -278,18 +278,17 @@ Showing 1 out of 5 results: 1 fails, 4 passes fubar!</code></pre>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_loop</span>(<span class="fl">1e6</span>),</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_vectorized</span>(<span class="fl">1e6</span>),</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">relative =</span> <span class="cn">TRUE</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_vectorized</span>(<span class="fl">1e6</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Some expressions had a GC in every iteration; so filtering is
 disabled.</code></pre>
 </div>
 <pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 2 × 6</span>
-  expression                        min median `itr/sec` mem_alloc `gc/sec`
-  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                      <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)        9.51   9.16      1          <span style="color: #BB0000;">NaN</span>     1   
-<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)  1      1         7.99       <span style="color: #BB0000;">Inf</span>     1.03
+  expression                           min   median `itr/sec` mem_alloc `gc/sec`
+  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                      <span style="color: #555555; font-style: italic;">&lt;bch:tm&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:tm&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:byt&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
+<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)        108.9ms  112.4ms      8.85    6.85KB    104. 
+<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)   11.9ms   12.8ms     69.5     37.9MB     87.3
 </code></pre>
 </div>
 <p>but we can do the math and get much better results:</p>
@@ -321,19 +320,18 @@ disabled.</code></pre>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_loop</span>(<span class="fl">1e6</span>),</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_vectorized</span>(<span class="fl">1e6</span>),</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_math</span>(<span class="fl">1e6</span>),</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">relative =</span> <span class="cn">TRUE</span></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_math</span>(<span class="fl">1e6</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Some expressions had a GC in every iteration; so filtering is
 disabled.</code></pre>
 </div>
 <pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 3 × 6</span>
-  expression                          min  median `itr/sec` mem_alloc `gc/sec`
-  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                        <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)       <span style="text-decoration: underline;">174</span>545. <span style="text-decoration: underline;">158</span>783.      1          <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">Inf</span>
-<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)  <span style="text-decoration: underline;">18</span>770.  <span style="text-decoration: underline;">17</span>611.      8.55       <span style="color: #BB0000;">Inf</span>      <span style="color: #BB0000;">Inf</span>
-<span style="color: #555555;">3</span> sum_multiples_math(1e+06)            1       1  <span style="text-decoration: underline;">153</span>284.         <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">NaN</span>
+  expression                           min   median `itr/sec` mem_alloc `gc/sec`
+  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                      <span style="color: #555555; font-style: italic;">&lt;bch:tm&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:tm&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:byt&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
+<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)        111.7ms  113.3ms    8.74<span style="color: #555555;">e</span>0    6.85KB    101. 
+<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)   11.9ms   12.9ms    6.84<span style="color: #555555;">e</span>1    37.9MB     86.0
+<span style="color: #555555;">3</span> sum_multiples_math(1e+06)          615ns    697ns    1.36<span style="color: #555555;">e</span>6   11.52KB      0  
 </code></pre>
 </div>
 <p>of course, in all cases we can parameterize the function rather than hard-coding it. The challenge would be to find the least common multiple. You could use the function <code>pracma::Lcm</code></p>
@@ -360,20 +358,18 @@ disabled.</code></pre>
 </div>
 <p>which incurs a cost of course, but that cost is minuscule relative to the other approaches above:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>sum_series_divisors_3_5 <span class="ot">&lt;-</span> \(x) <span class="fu">sum_series_divisors</span>(x, <span class="at">a =</span> <span class="dv">3</span>, <span class="at">b =</span> <span class="dv">5</span>)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_math</span>(<span class="fl">1e6</span>),</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_series_divisors_3_5</span>(<span class="fl">1e6</span>),</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">relative =</span> <span class="cn">TRUE</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_math</span>(<span class="fl">1e6</span>),</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_series_divisors</span>(<span class="fl">1e6</span>, <span class="at">a =</span> <span class="dv">3</span>, <span class="at">b =</span> <span class="dv">5</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 2 × 6</span>
-  expression                       min median `itr/sec` mem_alloc `gc/sec`
-  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_math(1e+06)       1      1         8.84       <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">NaN</span>
-<span style="color: #555555;">2</span> sum_series_divisors_3_5(1e+06)  9.27   9.29      1          <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">Inf</span>
+  expression                            min  median `itr/sec` mem_alloc `gc/sec`
+  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                        <span style="color: #555555; font-style: italic;">&lt;bch:t&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:t&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:byt&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
+<span style="color: #555555;">1</span> sum_multiples_math(1e+06)           615ns   697ns  1<span style="text-decoration: underline;">326</span>018.    11.5KB      0  
+<span style="color: #555555;">2</span> sum_series_divisors(1e+06, a = 3…   5.7µs   6.4µs   <span style="text-decoration: underline;">151</span>825.   432.8KB     60.8
 </code></pre>
 </div>
-<p>but let’s not use any libraries and write our own lcm function</p>
+<p>but let’s not use any libraries and write our own lcm function…</p>
 
 
 </section>
