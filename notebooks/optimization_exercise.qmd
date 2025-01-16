@@ -5,7 +5,7 @@ subtitle: >
 date: 2024-01-15
 categories: [programming, optimizing-code]
 execute: 
-  cache: false
+  cache: true
 ---
 
 I'm exploring the following problem as a potential exercise for students in my Scientific Computing course:
