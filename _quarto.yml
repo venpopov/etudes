@@ -3,4 +3,5 @@ project:
   execute-dir: project
   type: website
 
-
+execute:
+  cache: true

@@ -24,7 +24,6 @@ test <- function(.f, test_cases) {
   class(out) <- "tinytests"
   out
 }
-
 ```
 
 Here is a horrible way to implement this in R:
