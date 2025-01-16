@@ -1,0 +1,8 @@
+.callout {
+  border-top-right-radius:  0.75rem !important;
+  border-bottom-right-radius:  0.75rem !important;
+}
+
+.callout-header {
+  margin-bottom: 0.5rem !important;
+}
