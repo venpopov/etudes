@@ -288,8 +288,8 @@ disabled.</code></pre>
 <pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 2 × 6</span>
   expression                        min median `itr/sec` mem_alloc `gc/sec`
   <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                      <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)        9.67   8.97      1          <span style="color: #BB0000;">NaN</span>     1.11
-<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)  1      1         8.09       <span style="color: #BB0000;">Inf</span>     1   
+<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)        9.51   9.16      1          <span style="color: #BB0000;">NaN</span>     1   
+<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)  1      1         7.99       <span style="color: #BB0000;">Inf</span>     1.03
 </code></pre>
 </div>
 <p>but we can do the math and get much better results:</p>
@@ -331,9 +331,9 @@ disabled.</code></pre>
 <pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 3 × 6</span>
   expression                          min  median `itr/sec` mem_alloc `gc/sec`
   <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                        <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)       <span style="text-decoration: underline;">170</span>914. <span style="text-decoration: underline;">151</span>908.      1          <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">Inf</span>
-<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)  <span style="text-decoration: underline;">18</span>222.  <span style="text-decoration: underline;">17</span>060.      8.32       <span style="color: #BB0000;">Inf</span>      <span style="color: #BB0000;">Inf</span>
-<span style="color: #555555;">3</span> sum_multiples_math(1e+06)            1       1  <span style="text-decoration: underline;">148</span>783.         <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">NaN</span>
+<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)       <span style="text-decoration: underline;">174</span>545. <span style="text-decoration: underline;">158</span>783.      1          <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">Inf</span>
+<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)  <span style="text-decoration: underline;">18</span>770.  <span style="text-decoration: underline;">17</span>611.      8.55       <span style="color: #BB0000;">Inf</span>      <span style="color: #BB0000;">Inf</span>
+<span style="color: #555555;">3</span> sum_multiples_math(1e+06)            1       1  <span style="text-decoration: underline;">153</span>284.         <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">NaN</span>
 </code></pre>
 </div>
 <p>of course, in all cases we can parameterize the function rather than hard-coding it. The challenge would be to find the least common multiple. You could use the function <code>pracma::Lcm</code></p>
@@ -369,8 +369,8 @@ disabled.</code></pre>
 <pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 2 × 6</span>
   expression                       min median `itr/sec` mem_alloc `gc/sec`
   <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_math(1e+06)        1     1         8.76       <span style="color: #BB0000;">NaN</span>     2.19
-<span style="color: #555555;">2</span> sum_series_divisors_3_5(1e+06)  10.0   9.18      1          <span style="color: #BB0000;">NaN</span>     1   
+<span style="color: #555555;">1</span> sum_multiples_math(1e+06)       1      1         8.84       <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">NaN</span>
+<span style="color: #555555;">2</span> sum_series_divisors_3_5(1e+06)  9.27   9.29      1          <span style="color: #BB0000;">NaN</span>      <span style="color: #BB0000;">Inf</span>
 </code></pre>
 </div>
 <p>but let’s not use any libraries and write our own lcm function</p>
