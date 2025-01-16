@@ -16,7 +16,7 @@ I'm exploring the following problem as a potential exercise for students in my S
 Calculate the sum of all positive integers smaller or equal to N which are divisible by 3 or 5. For example, if N = 20, then the answer is 3+5+6+9+10+12+15+18+20 = 98
 :::
 
-```{r setup}
+```{r setup, cache=FALSE}
 #| include: false
 options(crayon.enabled = TRUE)
 knitr::opts_chunk$set(autodep = TRUE)
@@ -44,7 +44,7 @@ test <- function(.f) {
 
 Here is a horrible way to implement this in R:
 
-```{r}
+```{r sum_multiples_loop}
 sum_multiples_loop <- function(N) {
   out <- 0
   for (i in 1:N) {
@@ -91,8 +91,7 @@ We can now compare the performance of the two functions. There are many ways to 
 ```{r}
 bench::mark(
   sum_multiples_loop(1e6),
-  sum_multiples_vectorized(1e6),
-  relative = TRUE
+  sum_multiples_vectorized(1e6)
 )
 ```
 
@@ -125,8 +124,7 @@ compare to the other two functions:
 bench::mark(
   sum_multiples_loop(1e6),
   sum_multiples_vectorized(1e6),
-  sum_multiples_math(1e6),
-  relative = TRUE
+  sum_multiples_math(1e6)
 )
 ```
 
@@ -154,12 +152,10 @@ test(\(x) sum_series_divisors(x, a = 3, b = 5))
 which incurs a cost of course, but that cost is minuscule relative to the other approaches above:
 
 ```{r}
-sum_series_divisors_3_5 <- \(x) sum_series_divisors(x, a = 3, b = 5)
 bench::mark(
   sum_multiples_math(1e6),
-  sum_series_divisors_3_5(1e6),
-  relative = TRUE
+  sum_series_divisors(1e6, a = 3, b = 5)
 )
 ```
 
-but let's not use any libraries and write our own lcm function
+but let's not use any libraries and write our own lcm function...

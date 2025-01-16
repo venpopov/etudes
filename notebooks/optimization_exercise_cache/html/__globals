@@ -1,0 +1,9 @@
+testing-fun	
+sum_multiples_loop	
+unnamed-chunk-1	sum_multiples_loop	test
+unnamed-chunk-2	test
+unnamed-chunk-3	sum_multiples_loop	sum_multiples_vectorized
+unnamed-chunk-4	test
+unnamed-chunk-5	sum_multiples_loop	sum_multiples_math	sum_multiples_vectorized
+unnamed-chunk-6	test
+unnamed-chunk-7	sum_multiples_math	sum_series_divisors
