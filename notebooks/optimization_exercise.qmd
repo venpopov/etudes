@@ -1,33 +1,48 @@
 ---
-title: Math before you code
+title: A little math can go a long way
+subtitle: >
+  This document explores methods to calculate the sum of integers ≤ N divisible by 3 or 5. It includes R implementations, performance comparisons, and mathematical optimizations.
+date: 2024-01-15
+categories: [programming, optimizing-code]
+execute: 
+  cache: false
 ---
 
-*Problem*: calculate the sum of all integers smaller or equal to N which are divisible by 3 or 5.
+I'm exploring the following problem as a potential exercise for students in my Scientific Computing course:
 
-*Example*: if N = 20, then the answer is 3+5+6+9+10+12+15+18+20 = 98
+::: {.callout-note appearance="simple"}
+## Problem
 
-I'm exploring this problem as a potential exercise for students in my Scientific Computing course. 
-```{r}
+Calculate the sum of all positive integers smaller or equal to N which are divisible by 3 or 5. For example, if N = 20, then the answer is 3+5+6+9+10+12+15+18+20 = 98
+:::
+
+```{r setup}
 #| include: false
-test_cases <- list(
-  list(N = 3, res = 3),
-  list(N = -100, res = 0),
-  list(N = 20, res = 3 + 5 + 6 + 9 + 10 + 12 + 15 + 18 + 20),
-  list(N = 6, res = 3 + 5 + 6),
-  list(N = 0, res = 0)
-)
+options(crayon.enabled = TRUE)
+knitr::opts_chunk$set(autodep = TRUE)
+fansi::set_knit_hooks(knitr::knit_hooks, which = c("output", "message", "error"))
+```
 
-test <- function(.f, test_cases) {
-  out <- lapply(test_cases, \(case) {
-    tinytest::expect_equal(.f(case$N), case$res)
-  })
-  class(out) <- "tinytests"
-  out
+```{r testing-fun}
+#| code-fold: true
+#| code-summary: Unit tests
+test <- function(.f) {
+  structure(
+    list(
+      tinytest::expect_equal(.f(3), 3, info = "Input: N = 3"),
+      tinytest::expect_equal(.f(-100), 0, info = "Input: N = -100"),
+      tinytest::expect_equal(.f(20), 98, info = "Input: N = 20"),
+      tinytest::expect_equal(.f(6), 14, info = "Input: N = 6"),
+      tinytest::expect_equal(.f(0), 0, info = "Input: N = 0")
+    ),
+    class = "tinytests"
+  )
 }
 ```
 
-Here is a horrible way to implement this in R:
+## Code smell
 
+Here is a horrible way to implement this in R:
 
 ```{r}
 sum_multiples_loop <- function(N) {
@@ -41,39 +56,37 @@ sum_multiples_loop <- function(N) {
 }
 
 sum_multiples_loop(20)
-test(sum_multiples_loop, test_cases)
 ```
 
-There are a ton of problems. And we get a failed test case when N < 0.
+It works, but there are a ton of problems that make this code really slow and we can make it several thousand times faster by the end of this post. But it is also a good idea to test more than one case, and since I don't want to copy paste calls to each function for many different scenarios, I have written a small suite of unit tests:
 
-We can of course vectorize a lot and simplify the whole thing dramatically:
+```{r}
+test(sum_multiples_loop)
+```
+
+Not surprisingly, our function fails when the input is less than 0, so this is something that we need to address later.
+
+## Standard vectorization
+
+We can of course vectorize a lot and simplify the whole thing dramatically by using standard R vectorization. Instead of looping over positive integers from 1 to N, we create a vector x which stores those integers. Then we take advantage some vectorizations
 
 ```{r}
 sum_multiples_vectorized <- function(N) {
-  x <- 1:N
-  sum(x[x %% 3 == 0 | x %% 5 == 0])
+  if (N <= 0) return(0)                         # <1>
+  x <- seq_len(N)                               # <2>
+  is_divisible <- x %% 3 == 0 | x %% 5 == 0     # <3>
+  sum(x[is_divisible])                          # <4>
 }
 
-sum_multiples_vectorized(20)
-test(sum_multiples_vectorized, test_cases)
+test(sum_multiples_vectorized)
 ```
 
-though we still get an error for N < 0. We can fix it by 
+1.  Take care of edge cases with an early return; alternative is to give an error
+2.  seq_len(N) is a safer alternative to 1:N (doesn't matter here because we return early if N is not-positive, but good practice in general)
+3.  Boolean operations on vectors produce vectors of TRUE and FALSE values, so no need for loops and if statements
+4.  Subseting a vector with a boolean vector will return a new vector with only those values for which `is_divisible` is TRUE; `sum` is vectorized and will return the sum of all elements in x
 
-```{r}
-sum_multiples_vectorized <- function(N) {
-  if (N <= 0) {
-    return(0)
-  }
-  x <- seq_len(N)
-  sum(x[x %% 3 == 0 | x %% 5 == 0])
-}
-
-sum_multiples_vectorized(20)
-test(sum_multiples_vectorized, test_cases)
-```
-
-we can of course compare the speeds and marvel:
+We can now compare the performance of the two functions. There are many ways to do this. Here is one popular option:
 
 ```{r}
 bench::mark(
@@ -84,7 +97,6 @@ bench::mark(
 ```
 
 but we can do the math and get much better results:
-
 
 ```{r}
 sum_multiples_math <- function(N) {
@@ -104,11 +116,10 @@ sum_multiples_math <- function(N) {
     c * triangular_number(floor(N / c))
 }
 
-test(sum_multiples_math, test_cases)
+test(sum_multiples_math)
 ```
 
 compare to the other two functions:
-
 
 ```{r}
 bench::mark(
@@ -119,9 +130,7 @@ bench::mark(
 )
 ```
 
-of course, in all cases we can parametrize the function rather than hard-coding it. The challenge would be to find the least common multiple. You could use the function `pracma::Lcm`
-
-
+of course, in all cases we can parameterize the function rather than hard-coding it. The challenge would be to find the least common multiple. You could use the function `pracma::Lcm`
 
 ```{r}
 sum_series_divisors <- function(N, a, b) {
@@ -139,10 +148,10 @@ sum_series_divisors <- function(N, a, b) {
     lcm * triangular_number(floor(N / lcm))
 }
 
-test(\(x) sum_series_divisors(x, a = 3, b = 5), test_cases)
+test(\(x) sum_series_divisors(x, a = 3, b = 5))
 ```
 
-which incurs a cost of course, but that cost is miniscule relative to the other approaches above:
+which incurs a cost of course, but that cost is minuscule relative to the other approaches above:
 
 ```{r}
 sum_series_divisors_3_5 <- \(x) sum_series_divisors(x, a = 3, b = 5)
