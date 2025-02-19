@@ -1,4 +1,4 @@
- ---
+---
 title: "MCMC sampling examples"
 format: html
 ---
