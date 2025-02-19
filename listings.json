@@ -2,6 +2,8 @@
   {
     "listing": "/index.html",
     "items": [
+      "/notebooks/apollonian-circles.html",
+      "/notebooks/mcmc-examples.html",
       "/notebooks/optimization_exercise.html"
     ]
   }

@@ -7,9 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Vencislav Popov">
-<meta name="dcterms.date" content="2024-01-15">
 
-<title>A little math can go a long way – Etudes</title>
+<title>MCMC sampling examples – Etudes</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -121,13 +120,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <header id="title-block-header" class="quarto-title-block default toc-left page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">A little math can go a long way</h1>
-            <p class="subtitle lead"></p><p>This document explores methods to calculate the sum of integers ≤ N divisible by 3 or 5. It includes R implementations, performance comparisons, and mathematical optimizations.</p><p></p>
-                                <div class="quarto-categories">
-                <div class="quarto-category">programming</div>
-                <div class="quarto-category">optimizing-code</div>
-              </div>
-                  </div>
+      <h1 class="title">MCMC sampling examples</h1>
+                      </div>
   </div>
     
   
@@ -140,12 +134,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             </div>
     </div>
       
-      <div>
-      <div class="quarto-title-meta-heading">Published</div>
-      <div class="quarto-title-meta-contents">
-        <p class="date">January 15, 2024</p>
-      </div>
-    </div>
     
       
     </div>
@@ -158,8 +146,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#code-smell" id="toc-code-smell" class="nav-link active" data-scroll-target="#code-smell">Code smell</a></li>
-  <li><a href="#standard-vectorization" id="toc-standard-vectorization" class="nav-link" data-scroll-target="#standard-vectorization">Standard vectorization</a></li>
+  <li><a href="#metropolis-monte-carlo" id="toc-metropolis-monte-carlo" class="nav-link active" data-scroll-target="#metropolis-monte-carlo">Metropolis Monte Carlo</a>
+  <ul class="collapse">
+  <li><a href="#version-1-naive-implementation" id="toc-version-1-naive-implementation" class="nav-link" data-scroll-target="#version-1-naive-implementation">Version 1: Naive implementation</a></li>
+  </ul></li>
   </ul>
 </nav>
 </nav>
@@ -174,204 +164,202 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<p>I’m exploring the following problem as a potential exercise for students in my Scientific Computing course:</p>
-<div class="callout callout-style-simple callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Problem
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Calculate the sum of all positive integers smaller or equal to N which are divisible by 3 or 5. For example, if N = 20, then the answer is 3+5+6+9+10+12+15+18+20 = 98</p>
-</div>
-</div>
+<p>Goal: Explore a joint teaching approach, where I teach students both how to code in R in order to solve a real interesting problem rather than super basic stuff.</p>
+<ul class="task-list">
+<li><label><input type="checkbox">consider starting with estimating PI with rejection sampling approach</label></li>
+</ul>
 <div class="cell">
-<details class="code-fold">
-<summary>Unit tests</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span> <span class="cf">function</span>(.f) {</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">structure</span>(</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>      tinytest<span class="sc">::</span><span class="fu">expect_equal</span>(<span class="fu">.f</span>(<span class="dv">3</span>), <span class="dv">3</span>, <span class="at">info =</span> <span class="st">"Input: N = 3"</span>),</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>      tinytest<span class="sc">::</span><span class="fu">expect_equal</span>(<span class="fu">.f</span>(<span class="sc">-</span><span class="dv">100</span>), <span class="dv">0</span>, <span class="at">info =</span> <span class="st">"Input: N = -100"</span>),</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      tinytest<span class="sc">::</span><span class="fu">expect_equal</span>(<span class="fu">.f</span>(<span class="dv">20</span>), <span class="dv">98</span>, <span class="at">info =</span> <span class="st">"Input: N = 20"</span>),</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>      tinytest<span class="sc">::</span><span class="fu">expect_equal</span>(<span class="fu">.f</span>(<span class="dv">6</span>), <span class="dv">14</span>, <span class="at">info =</span> <span class="st">"Input: N = 6"</span>),</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>      tinytest<span class="sc">::</span><span class="fu">expect_equal</span>(<span class="fu">.f</span>(<span class="dv">0</span>), <span class="dv">0</span>, <span class="at">info =</span> <span class="st">"Input: N = 0"</span>)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">class =</span> <span class="st">"tinytests"</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(brms)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<section id="code-smell" class="level2">
-<h2 class="anchored" data-anchor-id="code-smell">Code smell</h2>
-<p>Here is a horrible way to implement this in R:</p>
+<p>We want to sample from a distribution. We know it’s density function, but imagine we don’t have a function that generates random samples. There are many ways to do it, but here we’ll illustrate MCMC methods:</p>
+<ul class="task-list">
+<li><label><input type="checkbox">metropolis (in progress)</label></li>
+<li><label><input type="checkbox">rejection sampling</label></li>
+<li><label><input type="checkbox">hamiltonian</label></li>
+<li><label><input type="checkbox">adaptive…</label></li>
+</ul>
+<p>We’ll also take an opportunity to see how we might optimize the code.</p>
+<section id="metropolis-monte-carlo" class="level2">
+<h2 class="anchored" data-anchor-id="metropolis-monte-carlo">Metropolis Monte Carlo</h2>
+<section id="version-1-naive-implementation" class="level3">
+<h3 class="anchored" data-anchor-id="version-1-naive-implementation">Version 1: Naive implementation</h3>
+<p>Purposefully bad slow code, but works. We have our standard components:</p>
+<ul>
+<li>a pdf to evaluate (f)</li>
+<li>an initial value</li>
+<li>a proposal distribution</li>
+<li>a fixed number of mcmc samples to target</li>
+</ul>
+<p>We iterate with a while loop and append accepted samples to a vector x until the length of the vector matches the number of samples.</p>
+<ul class="task-list">
+<li><label><input type="checkbox">illustrate function factories and what they do for us here (perhaps a previous example without them, hard-coding the functions)</label></li>
+</ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>sum_multiples_loop <span class="ot">&lt;-</span> <span class="cf">function</span>(N) {</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (i <span class="sc">%%</span> <span class="dv">3</span> <span class="sc">==</span> <span class="dv">0</span> <span class="sc">||</span> i <span class="sc">%%</span> <span class="dv">5</span> <span class="sc">==</span> <span class="dv">0</span>) {</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>      out <span class="ot">&lt;-</span> out <span class="sc">+</span> i</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(out)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">sum_multiples_loop</span>(<span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 98</code></pre>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mcmc_metropolis1 <span class="ot">&lt;-</span> <span class="cf">function</span>(f, init, proposal_dist, samples) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> init</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">while</span> (<span class="fu">length</span>(x) <span class="sc">&lt;</span> samples) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    x_ <span class="ot">&lt;-</span> <span class="fu">proposal_dist</span>(<span class="dv">1</span>, x[<span class="fu">length</span>(x)])</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    f1 <span class="ot">&lt;-</span> <span class="fu">f</span>(x[<span class="fu">length</span>(x)])</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    f2 <span class="ot">&lt;-</span> <span class="fu">f</span>(x_)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">runif</span>(<span class="dv">1</span>) <span class="sc">&lt;=</span> f2<span class="sc">/</span>f1) {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>      x <span class="ot">&lt;-</span> <span class="fu">c</span>(x, x_) </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>      x <span class="ot">&lt;-</span> <span class="fu">c</span>(x, x[<span class="fu">length</span>(x)])</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  x</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: check if can be done with distributional</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>dist_vonmises <span class="ot">&lt;-</span> <span class="cf">function</span>(mu, kappa) {</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(x) brms<span class="sc">::</span><span class="fu">dvon_mises</span>(x, <span class="at">mu =</span> mu, <span class="at">kappa =</span> kappa)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>dist_norm <span class="ot">&lt;-</span> <span class="cf">function</span>(sd) {</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(n, x) <span class="fu">rnorm</span>(n, <span class="at">mean =</span> x, <span class="at">sd =</span> sd)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">mcmc_metropolis1</span>(</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">f =</span> <span class="fu">dist_vonmises</span>(<span class="dv">0</span>, <span class="dv">10</span>), </span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">init =</span> <span class="fl">0.5</span>, </span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  <span class="at">proposal_dist =</span> <span class="fu">dist_norm</span>(<span class="at">sd =</span> <span class="fl">0.25</span>), </span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">samples =</span> <span class="dv">2000</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-</div>
-<p>It works, but there are a ton of problems that make this code really slow and we can make it several thousand times faster by the end of this post. But it is also a good idea to test more than one case, and since I don’t want to copy paste calls to each function for many different scenarios, I have written a small suite of unit tests:</p>
+<ul class="task-list">
+<li><label><input type="checkbox">add multiple traces in a subsequent example</label></li>
+</ul>
+<p>here is our mcmc trace:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">test</span>(sum_multiples_loop)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>----- FAILED[data]: &lt;--&gt;
- call| test(sum_multiples_loop)
- diff| Expected '0', got '-2418'
- info| Input: N = -100
- 
-Showing 1 out of 5 results: 1 fails, 4 passes fubar!</code></pre>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(out, <span class="at">type =</span> <span class="st">"l"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="mcmc-examples_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
 </div>
 </div>
-<p>Not surprisingly, our function fails when the input is less than 0, so this is something that we need to address later.</p>
-</section>
-<section id="standard-vectorization" class="level2">
-<h2 class="anchored" data-anchor-id="standard-vectorization">Standard vectorization</h2>
-<p>We can of course vectorize a lot and simplify the whole thing dramatically by using standard R vectorization. Instead of looping over positive integers from 1 to N, we create a vector x which stores those integers. Then we take advantage some vectorizations</p>
+</div>
+<p>and the resulting distribution of samples, with the theoretical density on top:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="annotated-cell-4"><pre class="sourceCode r code-annotation-code code-with-copy code-annotated"><code class="sourceCode r"><span id="annotated-cell-4-1"><a href="#annotated-cell-4-1" aria-hidden="true" tabindex="-1"></a>sum_multiples_vectorized <span class="ot">&lt;-</span> <span class="cf">function</span>(N) {</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-4" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-4-2" class="code-annotation-target"><a href="#annotated-cell-4-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (N <span class="sc">&lt;=</span> <span class="dv">0</span>) <span class="fu">return</span>(<span class="dv">0</span>)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-4" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-4-3" class="code-annotation-target"><a href="#annotated-cell-4-3" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">seq_len</span>(N)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-4" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-4-4" class="code-annotation-target"><a href="#annotated-cell-4-4" aria-hidden="true" tabindex="-1"></a>  is_divisible <span class="ot">&lt;-</span> x <span class="sc">%%</span> <span class="dv">3</span> <span class="sc">==</span> <span class="dv">0</span> <span class="sc">|</span> x <span class="sc">%%</span> <span class="dv">5</span> <span class="sc">==</span> <span class="dv">0</span></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-4" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-4-5" class="code-annotation-target"><a href="#annotated-cell-4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum</span>(x[is_divisible])</span>
-<span id="annotated-cell-4-6"><a href="#annotated-cell-4-6" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="annotated-cell-4-7"><a href="#annotated-cell-4-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="annotated-cell-4-8"><a href="#annotated-cell-4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">test</span>(sum_multiples_vectorized)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-annotation">
-<dl class="code-annotation-container-grid">
-<dt data-target-cell="annotated-cell-4" data-target-annotation="1">1</dt>
-<dd>
-<span data-code-cell="annotated-cell-4" data-code-lines="2" data-code-annotation="1">Take care of edge cases with an early return; alternative is to give an error</span>
-</dd>
-<dt data-target-cell="annotated-cell-4" data-target-annotation="2">2</dt>
-<dd>
-<span data-code-cell="annotated-cell-4" data-code-lines="3" data-code-annotation="2">seq_len(N) is a safer alternative to 1:N (doesn’t matter here because we return early if N is not-positive, but good practice in general)</span>
-</dd>
-<dt data-target-cell="annotated-cell-4" data-target-annotation="3">3</dt>
-<dd>
-<span data-code-cell="annotated-cell-4" data-code-lines="4" data-code-annotation="3">Boolean operations on vectors produce vectors of TRUE and FALSE values, so no need for loops and if statements</span>
-</dd>
-<dt data-target-cell="annotated-cell-4" data-target-annotation="4">4</dt>
-<dd>
-<span data-code-cell="annotated-cell-4" data-code-lines="5" data-code-annotation="4">Subseting a vector with a boolean vector will return a new vector with only those values for which <code>is_divisible</code> is TRUE; <code>sum</code> is vectorized and will return the sum of all elements in x</span>
-</dd>
-</dl>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>All ok, 5 results fubar!</code></pre>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">density</span>(out))</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(<span class="fu">dist_vonmises</span>(<span class="dv">0</span>, <span class="dv">10</span>)(x), <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"red"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="mcmc-examples_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
 </div>
 </div>
-<p>We can now compare the performance of the two functions. There are many ways to do this. Here is one popular option:</p>
+</div>
+<p>it runs fast because this is a really simple problem, but we can optimize our function a lot. Here are a few different ways to code the same algorithm:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_loop</span>(<span class="fl">1e6</span>),</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_vectorized</span>(<span class="fl">1e6</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>mcmc_metropolis2 <span class="ot">&lt;-</span> <span class="cf">function</span>(f, init, proposal_dist, samples) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="fu">numeric</span>(samples)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  f1 <span class="ot">&lt;-</span> <span class="fu">f</span>(init)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(samples)) {</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    out[i] <span class="ot">&lt;-</span> init</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    x <span class="ot">&lt;-</span> <span class="fu">proposal_dist</span>(<span class="dv">1</span>, init)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    f2 <span class="ot">&lt;-</span> <span class="fu">f</span>(x)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">runif</span>(<span class="dv">1</span>) <span class="sc">&lt;=</span> f2<span class="sc">/</span>f1) {</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      init <span class="ot">&lt;-</span> x</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>      f1 <span class="ot">&lt;-</span> f2</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    } </span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  out</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>mcmc_metropolis3 <span class="ot">&lt;-</span> <span class="cf">function</span>(f, init, proposal_dist, samples) {</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  next_sample <span class="ot">&lt;-</span> <span class="cf">function</span>(current, ...) {</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    x_ <span class="ot">&lt;-</span> <span class="fu">proposal_dist</span>(<span class="dv">1</span>, current)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    f1 <span class="ot">&lt;-</span> <span class="fu">f</span>(current)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    f2 <span class="ot">&lt;-</span> <span class="fu">f</span>(x_)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">runif</span>(<span class="dv">1</span>) <span class="sc">&lt;=</span> f2<span class="sc">/</span>f1) x_ <span class="cf">else</span> current</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Reduce</span>(next_sample, <span class="fu">numeric</span>(samples<span class="dv">-1</span>), <span class="at">init =</span> init, <span class="at">accumulate =</span> <span class="cn">TRUE</span>)  </span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>mcmc_metropolis4 <span class="ot">&lt;-</span> <span class="cf">function</span>(f, init, proposal_dist, samples) {</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  next_sample <span class="ot">&lt;-</span> <span class="cf">function</span>(current, ...) {</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    x_ <span class="ot">&lt;-</span> <span class="fu">proposal_dist</span>(<span class="dv">1</span>, current)</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    f1 <span class="ot">&lt;-</span> <span class="fu">f</span>(current)</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    f2 <span class="ot">&lt;-</span> <span class="fu">f</span>(x_)</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">runif</span>(<span class="dv">1</span>) <span class="sc">&lt;=</span> f2<span class="sc">/</span>f1) x_ <span class="cf">else</span> current</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">"list"</span>, samples)</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq.int</span>(samples)) {</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    out[[i]] <span class="ot">&lt;-</span> init</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    init <span class="ot">&lt;-</span> <span class="fu">next_sample</span>(init)</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>  out</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>There are some speed differences among those, but they are all substantially better than the original.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mcmc_metropolis1</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">f =</span> <span class="cf">function</span>(x) <span class="fu">exp</span>(<span class="dv">10</span> <span class="sc">*</span> <span class="fu">cos</span>(x)),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">init =</span> <span class="fl">0.5</span>, </span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">proposal_dist =</span> <span class="fu">dist_norm</span>(<span class="at">sd =</span> <span class="fl">0.25</span>), </span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">samples =</span> <span class="dv">10000</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mcmc_metropolis2</span>(</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">f =</span> <span class="cf">function</span>(x) <span class="fu">exp</span>(<span class="dv">10</span> <span class="sc">*</span> <span class="fu">cos</span>(x)),</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">init =</span> <span class="fl">0.5</span>, </span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">proposal_dist =</span> <span class="fu">dist_norm</span>(<span class="at">sd =</span> <span class="fl">0.25</span>), </span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">samples =</span> <span class="dv">10000</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mcmc_metropolis3</span>(</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">f =</span> <span class="cf">function</span>(x) <span class="fu">exp</span>(<span class="dv">10</span> <span class="sc">*</span> <span class="fu">cos</span>(x)),</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">init =</span> <span class="fl">0.5</span>, </span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">proposal_dist =</span> <span class="fu">dist_norm</span>(<span class="at">sd =</span> <span class="fl">0.25</span>), </span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">samples =</span> <span class="dv">10000</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  ),  </span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mcmc_metropolis4</span>(</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">f =</span> <span class="cf">function</span>(x) <span class="fu">exp</span>(<span class="dv">10</span> <span class="sc">*</span> <span class="fu">cos</span>(x)),</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">init =</span> <span class="fl">0.5</span>, </span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">proposal_dist =</span> <span class="fu">dist_norm</span>(<span class="at">sd =</span> <span class="fl">0.25</span>), </span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">samples =</span> <span class="dv">10000</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  ),  </span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">check =</span> <span class="cn">FALSE</span> </span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: Some expressions had a GC in every iteration; so filtering is
 disabled.</code></pre>
 </div>
-<pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 2 × 6</span>
-  expression                           min   median `itr/sec` mem_alloc `gc/sec`
-  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                      <span style="color: #555555; font-style: italic;">&lt;bch:tm&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:tm&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:byt&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)        108.9ms  112.4ms      8.85    6.85KB    104. 
-<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)   11.9ms   12.8ms     69.5     37.9MB     87.3
-</code></pre>
-</div>
-<p>but we can do the math and get much better results:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>sum_multiples_math <span class="ot">&lt;-</span> <span class="cf">function</span>(N) {</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (N <span class="sc">&lt;=</span> <span class="dv">0</span>) {</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="dv">0</span>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  triangular_number <span class="ot">&lt;-</span> <span class="cf">function</span>(n) {</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    n <span class="sc">*</span> (n <span class="sc">+</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="dv">2</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  a <span class="ot">&lt;-</span> <span class="dv">3</span></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  b <span class="ot">&lt;-</span> <span class="dv">5</span></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  c <span class="ot">&lt;-</span> <span class="dv">15</span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  a <span class="sc">*</span> <span class="fu">triangular_number</span>(<span class="fu">floor</span>(N <span class="sc">/</span> a)) <span class="sc">+</span></span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    b <span class="sc">*</span> <span class="fu">triangular_number</span>(<span class="fu">floor</span>(N <span class="sc">/</span> b)) <span class="sc">-</span></span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    c <span class="sc">*</span> <span class="fu">triangular_number</span>(<span class="fu">floor</span>(N <span class="sc">/</span> c))</span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="fu">test</span>(sum_multiples_math)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>All ok, 5 results fubar!</code></pre>
-</div>
-</div>
-<p>compare to the other two functions:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_loop</span>(<span class="fl">1e6</span>),</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_vectorized</span>(<span class="fl">1e6</span>),</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_math</span>(<span class="fl">1e6</span>)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Some expressions had a GC in every iteration; so filtering is
-disabled.</code></pre>
-</div>
-<pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 3 × 6</span>
-  expression                           min   median `itr/sec` mem_alloc `gc/sec`
-  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                      <span style="color: #555555; font-style: italic;">&lt;bch:tm&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:tm&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:byt&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_loop(1e+06)        111.7ms  113.3ms    8.74<span style="color: #555555;">e</span>0    6.85KB    101. 
-<span style="color: #555555;">2</span> sum_multiples_vectorized(1e+06)   11.9ms   12.9ms    6.84<span style="color: #555555;">e</span>1    37.9MB     86.0
-<span style="color: #555555;">3</span> sum_multiples_math(1e+06)          615ns    697ns    1.36<span style="color: #555555;">e</span>6   11.52KB      0  
-</code></pre>
-</div>
-<p>of course, in all cases we can parameterize the function rather than hard-coding it. The challenge would be to find the least common multiple. You could use the function <code>pracma::Lcm</code></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>sum_series_divisors <span class="ot">&lt;-</span> <span class="cf">function</span>(N, a, b) {</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (N <span class="sc">&lt;=</span> <span class="dv">0</span>) {</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="dv">0</span>)</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  triangular_number <span class="ot">&lt;-</span> <span class="cf">function</span>(n) {</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    n <span class="sc">*</span> (n <span class="sc">+</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="dv">2</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  lcm <span class="ot">&lt;-</span> pracma<span class="sc">::</span><span class="fu">Lcm</span>(a, b)</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  a <span class="sc">*</span> <span class="fu">triangular_number</span>(<span class="fu">floor</span>(N <span class="sc">/</span> a)) <span class="sc">+</span></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    b <span class="sc">*</span> <span class="fu">triangular_number</span>(<span class="fu">floor</span>(N <span class="sc">/</span> b)) <span class="sc">-</span></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    lcm <span class="sc">*</span> <span class="fu">triangular_number</span>(<span class="fu">floor</span>(N <span class="sc">/</span> lcm))</span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="fu">test</span>(\(x) <span class="fu">sum_series_divisors</span>(x, <span class="at">a =</span> <span class="dv">3</span>, <span class="at">b =</span> <span class="dv">5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>All ok, 5 results fubar!</code></pre>
-</div>
-</div>
-<p>which incurs a cost of course, but that cost is minuscule relative to the other approaches above:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_multiples_math</span>(<span class="fl">1e6</span>),</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum_series_divisors</span>(<span class="fl">1e6</span>, <span class="at">a =</span> <span class="dv">3</span>, <span class="at">b =</span> <span class="dv">5</span>)</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<pre class="fansi fansi-output"><code><span style="color: #555555;"># A tibble: 2 × 6</span>
+<pre><code># A tibble: 4 × 6
   expression                            min  median `itr/sec` mem_alloc `gc/sec`
-  <span style="color: #555555; font-style: italic;">&lt;bch:expr&gt;</span>                        <span style="color: #555555; font-style: italic;">&lt;bch:t&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:t&gt;</span>     <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #555555; font-style: italic;">&lt;bch:byt&gt;</span>    <span style="color: #555555; font-style: italic;">&lt;dbl&gt;</span>
-<span style="color: #555555;">1</span> sum_multiples_math(1e+06)           615ns   697ns  1<span style="text-decoration: underline;">326</span>018.    11.5KB      0  
-<span style="color: #555555;">2</span> sum_series_divisors(1e+06, a = 3…   5.7µs   6.4µs   <span style="text-decoration: underline;">151</span>825.   432.8KB     60.8
-</code></pre>
+  &lt;bch:expr&gt;                        &lt;bch:t&gt; &lt;bch:t&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;
+1 mcmc_metropolis1(f = function(x)… 102.7ms 120.3ms      7.66     382MB    80.4 
+2 mcmc_metropolis2(f = function(x)…  12.2ms  12.8ms     76.6      122KB     7.86
+3 mcmc_metropolis3(f = function(x)…  17.9ms  18.7ms     51.1      349KB     9.83
+4 mcmc_metropolis4(f = function(x)…  16.1ms  16.7ms     58.7      129KB     9.79</code></pre>
 </div>
-<p>but let’s not use any libraries and write our own lcm function…</p>
+</div>
+<p>An alternative to the metropolis algorithm is rejection sampling:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>rejection_sampling <span class="ot">&lt;-</span> <span class="cf">function</span>(n, f, max_f, proposal_fun, ...) {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">is.numeric</span>(n), <span class="fu">length</span>(n) <span class="sc">==</span> <span class="dv">1</span>, n <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">is.numeric</span>(max_f), <span class="fu">length</span>(max_f) <span class="sc">==</span> <span class="dv">1</span> <span class="sc">|</span> <span class="fu">length</span>(max_f) <span class="sc">==</span> n, max_f <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  inner <span class="ot">&lt;-</span> <span class="cf">function</span>(n, f, max_f, proposal_fun, ..., <span class="at">acc =</span> <span class="fu">c</span>()) {</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">length</span>(acc) <span class="sc">&gt;</span> n) {</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">return</span>(acc[<span class="fu">seq_len</span>(n)])</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    x <span class="ot">&lt;-</span> <span class="fu">proposal_fun</span>(n)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    y <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">runif</span>(n) <span class="sc">*</span> max_f</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    accept <span class="ot">&lt;-</span> y <span class="sc">&lt;</span> <span class="fu">f</span>(x, ...)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner</span>(n, f, max_f, proposal_fun, ..., <span class="at">acc =</span> <span class="fu">c</span>(acc, x[accept]))</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner</span>(n, f, max_f, proposal_fun, ...)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
