@@ -1,0 +1,134 @@
+---
+title: "Untitled"
+editor: visual
+---
+
+I am curious about how working with vectors vs lists in R differs in terms of speed for different purposes. For the first test, I will make vectors and lists with random numbers of varying lengths, and then sum them using various methods. I know that using built-in sum of vectors is fastest - what I'm interested in is in how the different methods fall short of that.
+
+```{r}
+library(tidyverse)
+
+x_v <- rnorm(1e6)
+x_l <- as.list(x_v)
+
+sum_loop_by_value <- function(x) {
+  total <- 0
+  for (v in x) {
+    total <- total + v
+  }
+  total
+}
+
+sum_loop_by_ind <- function(x) {
+  total <- 0
+  for (i in seq_along(x)) {
+    total <- total + x[[i]]
+  }
+  total
+}
+
+
+results <- bench::press(
+  len = 10^(1:6),
+  {
+    x_v <- rnorm(len)
+    x_l <- as.list(x_v)
+    bench::mark(
+      sum = sum(x_v),
+      Reduce_v = Reduce("+", x_v),
+      Reduce_l = Reduce("+", x_l),
+      reduce_v = purrr::reduce(x_v, `+`),
+      reduce_l = purrr::reduce(x_l, `+`), 
+      loop_val_v = sum_loop_by_value(x_v),
+      loop_val_l = sum_loop_by_value(x_l),
+      loop_ind_v = sum_loop_by_ind(x_v),
+      loop_ind_l = sum_loop_by_ind(x_l),
+      min_iterations = 10
+    )
+  }
+)
+```
+
+```{r}
+print(results, n = nrow(results))
+```
+
+```{r}
+results |> 
+  dplyr::select(expression, len, median, mem_alloc) |> 
+  print(n = nrow(results))
+```
+
+```{r}
+plot(results, size = 0.1)
+```
+
+```{r}
+#| fig-width: 10
+results |> 
+  mutate(
+    expression = as.character(expression),
+    structure_type = if_else(grepl("_l", as.character(results$expression)), "list", "vector")
+  ) |> 
+  ggplot(aes(len, median, color = expression)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~structure_type)
+```
+
+
+```{r}
+results |> 
+  dplyr::select(expression, len, median, mem_alloc) |> 
+  write_csv("notebooks/assets/sum_timing.csv")
+```
+
+
+I am surprised that Reduce has an order of magnitude overhead compared to a loop. Let's try a more expensive operation.
+
+```{r}
+log_exp_loop_direct <- function(x) {
+  total <- 1
+  for (v in x) {
+    total <- exp(log(total) + v)*abs(cos(v))*abs(cos(v))*abs(cos(v))
+  }
+  total
+}
+
+log_exp_loop_funeval <- function(x) {
+  total <- 1
+  for (v in x) {
+    total <- exp_log_add(total, v)
+  }
+  total
+}
+
+exp_log_add <- function(a, b) {
+  exp(log(a) + b)*abs(cos(b))*abs(cos(b))*abs(cos(b))
+}
+
+
+results <- bench::press(
+  len = 10^(1:6),
+  {
+    x_v <- rnorm(len)
+    bench::mark(
+      Reduce = Reduce(exp_log_add, x_v, init = 1),
+      reduce = purrr::reduce(x_v, exp_log_add, .init = 1),
+      log_exp_loop_direct(x_v),
+      log_exp_loop_funeval(x_v),
+      min_iterations = 10
+    )
+  }
+)
+```
+
+
+```{r}
+results |> 
+  select(expression, len, median) |> 
+  mutate(expression = as.character(expression)) |> 
+  spread(len, median) |> 
+  print(n = nrow(results))
+```
+

@@ -1,0 +1,28 @@
+---
+title: "Recusive algorithms"
+format: html
+---
+
+```{r}
+library(trampoline)
+```
+
+A standard recursive algorithm for determining eveness:
+
+```{r}
+is_even <- function(n = integer()) {
+  stopifnot(rlang::is_scalar_integerish(n), n >= 0)
+  if (n == 0) {
+    return(TRUE)
+  } else if (n == 1) {
+    return(FALSE)
+  }
+  is_even(n-2)
+}
+
+x <- 1:100
+
+
+```
+
+

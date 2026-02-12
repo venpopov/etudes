@@ -1,0 +1,55 @@
+expression,len,median,mem_alloc
+sum,10, 81.96ns,  0B
+Reduce_v,10,  3.48µs,  0B
+Reduce_l,10,  3.4µs,  0B
+reduce_v,10,  8.98µs,  0B
+reduce_l,10,  8.9µs,  0B
+loop_val_v,10,410.13ns, 12.64KB
+loop_val_l,10,492.09ns,  0B
+loop_ind_v,10,532.95ns, 19.17KB
+loop_ind_l,10,573.93ns,  0B
+sum,100,164.03ns,  0B
+Reduce_v,100, 16.69µs,  1.76KB
+Reduce_l,100, 16.61µs,  1.76KB
+reduce_v,100, 44.4µs,  0B
+reduce_l,100, 42.89µs,  0B
+loop_val_v,100,  1.15µs,  0B
+loop_val_l,100,  1.68µs,  0B
+loop_ind_v,100,  1.68µs,  0B
+loop_ind_l,100,  2.09µs,  0B
+sum,1000,861.01ns,  0B
+Reduce_v,1000,150.8µs, 15.82KB
+Reduce_l,1000,145.51µs, 15.82KB
+reduce_v,1000,396.02µs,  0B
+reduce_l,1000,388.21µs,  0B
+loop_val_v,1000,  8.2µs,  0B
+loop_val_l,1000, 13.49µs,  0B
+loop_ind_v,1000, 13.41µs,  0B
+loop_ind_l,1000, 17.51µs,  0B
+sum,10000,  7.91µs,  0B
+Reduce_v,10000,  1.43ms,156.44KB
+Reduce_l,10000,  1.43ms,156.44KB
+reduce_v,10000,  3.87ms,  0B
+reduce_l,10000,  3.79ms,  0B
+loop_val_v,10000, 79.91µs,  0B
+loop_val_l,10000,132.76µs,  0B
+loop_ind_v,10000,132.1µs,  0B
+loop_ind_l,10000,172.77µs,  0B
+sum,100000, 78.23µs,  0B
+Reduce_v,100000, 14.34ms,  1.53MB
+Reduce_l,100000, 14.4ms,  1.53MB
+reduce_v,100000, 38.55ms,  0B
+reduce_l,100000, 37.83ms,  0B
+loop_val_v,100000,798.27µs,  0B
+loop_val_l,100000,  1.33ms,  0B
+loop_ind_v,100000,  1.32ms,  0B
+loop_ind_l,100000,  1.74ms,  0B
+sum,1000000,785.64µs,  0B
+Reduce_v,1000000,149.61ms, 15.26MB
+Reduce_l,1000000,151.5ms, 15.26MB
+reduce_v,1000000,391.32ms,  0B
+reduce_l,1000000,387.99ms,  0B
+loop_val_v,1000000,  8.03ms,  0B
+loop_val_l,1000000, 13.8ms,  0B
+loop_ind_v,1000000, 13.28ms,  0B
+loop_ind_l,1000000, 17.75ms,  0B

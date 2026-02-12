@@ -1,5 +1,5 @@
 ---
-title: "aRt: apollonian circles"
+title: "aRt-o Pollo"
 format: 
   html:
     include-in-header:
